@@ -24,12 +24,12 @@ export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {
   return (
     <RigidBody type="fixed" position={position}>
       {/* Optional: Replace with a magical book model or glowing orb */}
-      <mesh>
+      {/* <mesh>
         <boxGeometry args={[1.5, 1.2, 0.2]} />
         <meshStandardMaterial color="purple" />
       </mesh>
-
-      <Html position={[0, 1.2, 0]}>
+      */}
+      <Html position={[-0.5, 1.5, 0]}>
         <div
           style={{
             background: "rgba(0,0,0,0.75)",
