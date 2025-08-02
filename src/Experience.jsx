@@ -11,6 +11,7 @@ import BuildingColliders from "./components/Building/BuildingColliders";
 import Player from "./Player";
 import RiddleTerminal from "./components/RiddleTerminal";
 import Clue from "./components/Clue"; // ✅ Clues with glow
+import DeskColliders from "./components/Building/DeskColliders"; // ✅ Desk colliders
 
 export default function Experience() {
   return (
@@ -27,9 +28,7 @@ export default function Experience() {
             console.log("Riddle solved!");
           }}
         />
-
         <Player />
-
         <Building position={[0, 0, 0]} />
         <Building
           mirror
@@ -37,7 +36,7 @@ export default function Experience() {
           rotation={[0, Math.PI + 0.1, 0]}
         />
         <BuildingColliders position={[0, 0, 0]} />
-
+        <DeskColliders position={[0, 0, 0]} />
         {/* Glowing Clues */}
         <Clue
           position={[-2, 0.5, 11.5]}
@@ -59,9 +58,9 @@ export default function Experience() {
           message="Truth is often mirrored."
           onClueFound={() => console.log("Clue 4 found!")}
         />
-
         {/* Ground collider */}
-        <CuboidCollider args={[50, 1, 50]} position={[0, -1, 0]} />
+        {/*         <CuboidCollider args={[50, 1, 50]} position={[0, -1, 0]} />
+         */}
       </Physics>
 
       {/* 🌟 Post-processing bloom effect */}

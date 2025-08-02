@@ -16,13 +16,13 @@ export default function Player() {
   const keysPressed = useRef({ w: false, a: false, s: false, d: false });
   const isWalking = useRef(false);
 
-  // Footstep sound
+  // Footstep sound while player moves
   const footstepAudio = useRef(new Audio(footstepSound));
   footstepAudio.current.loop = true;
   footstepAudio.current.volume = 0.3;
   footstepAudio.current.playbackRate = 1.2;
 
-  // Background music
+  // Cozy Background music
   const musicRef = useRef(new Audio(bgMusic));
   const hasStartedMusic = useRef(false);
 
@@ -65,6 +65,7 @@ export default function Player() {
     };
     // Add click listener to the canvas
     // This ensures the music starts only after user interaction
+    // needed to add this for autoplay policies in browsers
     const dom = gl.domElement;
     dom.addEventListener("click", handleClick);
     return () => dom.removeEventListener("click", handleClick);
@@ -127,7 +128,7 @@ export default function Player() {
         linearDamping={0.9}
         type="dynamic"
       >
-        <CylinderCollider args={[0.5, 2, 0.5]} />
+        <CylinderCollider args={[0.4, 2, 0.4]} />
       </RigidBody>
     </>
   );

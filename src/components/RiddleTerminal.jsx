@@ -3,7 +3,7 @@ import { Html } from "@react-three/drei";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
-const correctAnswer = "knowledge";
+const correctAnswer = "knowledge"; // The answer to the riddle
 
 export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {
   const [userInput, setUserInput] = useState("");
@@ -37,8 +37,8 @@ export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {
             borderRadius: "10px",
             width: "220px",
             color: "white",
-            fontFamily: "monospace",
             textAlign: "center",
+            fontFamily: "CosyFont",
           }}
         >
           <p>
@@ -62,11 +62,19 @@ export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {
                 marginTop: "0.5rem",
                 borderRadius: "5px",
                 border: "none",
-                textAlign: "center",
+                fontFamily: "CosyFont",
               }}
             />
           </form>
-          <p style={{ marginTop: "0.5rem", fontSize: "0.8rem" }}>{feedback}</p>
+          <p
+            style={{
+              marginTop: "0.5rem",
+              fontSize: "0.8rem",
+              fontFamily: "CosyFont",
+            }}
+          >
+            {feedback}
+          </p>
         </div>
       </Html>
     </RigidBody>

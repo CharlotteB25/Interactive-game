@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Text, Billboard } from "@react-three/drei";
-import fancyFont from "../assets/fonts/Imperial_Script/ImperialScript-Regular.ttf";
+import cosyFont from "../assets/fonts/Sour_Gummy/SourGummy-VariableFont_wdth,wght.ttf";
 
 export default function Clue({ position = [0, 0, 0], message, onClueFound }) {
   const meshRef = useRef();
@@ -60,7 +60,7 @@ export default function Clue({ position = [0, 0, 0], message, onClueFound }) {
             anchorX="center"
             anchorY="bottom"
             maxWidth={3}
-            font={fancyFont}
+            font={cosyFont}
           >
             {message}
           </Text>
