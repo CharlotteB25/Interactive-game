@@ -9,7 +9,7 @@ import bgMusic from "./assets/sounds/backgroundMusic.wav";
 
 const SPEED = 2;
 
-export default function Player() {
+export default function Player({ start = [1, 0, 7] }) {
   const { camera, gl } = useThree();
   const playerRef = useRef();
 
@@ -123,7 +123,7 @@ export default function Player() {
       <RigidBody
         ref={playerRef}
         colliders={false}
-        position={[1, 0, 7]}
+        position={start}
         enabledRotations={[false, false, false]}
         linearDamping={0.9}
         type="dynamic"

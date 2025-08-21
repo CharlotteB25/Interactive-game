@@ -1,33 +1,41 @@
-import { OrbitControls, Environment } from "@react-three/drei";
+import SimonBeacons from "./components/SimonBeacons/SimonBeacons";
+import { useGameFlow } from "./GameFlow"; // or "./game/GameFlow" if that's your path
 import { Perf } from "r3f-perf";
-import { Physics, CuboidCollider } from "@react-three/rapier";
-import { EffectComposer, Bloom } from "@react-three/postprocessing"; // ✅ Import bloom
-
+import { EffectComposer, Bloom } from "@react-three/postprocessing";
+import Player from "./Player";
 import Lights from "./environment/Lights";
-import Floor from "./components/Floor/Floor";
-import Coffee from "./components/Coffee/Coffee";
+import { Physics } from "@react-three/rapier";
 import Building from "./components/Building/Building";
 import BuildingColliders from "./components/Building/BuildingColliders";
-import Player from "./Player";
+import DeskColliders from "./components/Building/DeskColliders";
 import RiddleTerminal from "./components/RiddleTerminal";
-import Clue from "./components/Clue"; // ✅ Clues with glow
-import DeskColliders from "./components/Building/DeskColliders"; // ✅ Desk colliders
+import Clue from "./components/Clue";
 
 export default function Experience() {
+  const { simonComplete, setSimonComplete, setRiddleSolved } = useGameFlow();
+
   return (
     <>
       <Perf position="top-left" />
-      {/* <OrbitControls makeDefault /> */}
-
       <Lights />
 
       <Physics debug gravity={[0, -9.81, 0]}>
-        <RiddleTerminal
-          position={[0, 1, 0]}
-          onSolved={() => {
-            console.log("Riddle solved!");
-          }}
-        />
+        {!simonComplete && (
+          <SimonBeacons
+            // tweak positions to match where you want the cluster in your room
+
+            onComplete={() => setSimonComplete(true)}
+          />
+        )}
+
+        {/* Riddle only AFTER Simon */}
+        {simonComplete && (
+          <RiddleTerminal
+            position={[0, 1, 0]}
+            onSolved={() => setRiddleSolved(true)}
+          />
+        )}
+
         <Player />
         <Building position={[0, 0, 0]} />
         <Building
@@ -37,33 +45,27 @@ export default function Experience() {
         />
         <BuildingColliders position={[0, 0, 0]} />
         <DeskColliders position={[0, 0, 0]} />
-        {/* Glowing Clues */}
-        <Clue
-          position={[-2, 0.5, 11.5]}
-          message="The answer lies near the roots."
-          onClueFound={() => console.log("Clue 1 found!")}
-        />
-        <Clue
-          position={[2, 0.5, 13]}
-          message="A tree holds more than leaves."
-          onClueFound={() => console.log("Clue 2 found!")}
-        />
-        <Clue
-          position={[4.5, 0.5, 4]}
-          message="Seek the whisper in silence."
-          onClueFound={() => console.log("Clue 3 found!")}
-        />
-        <Clue
-          position={[-2, 0.5, 7]}
-          message="Truth is often mirrored."
-          onClueFound={() => console.log("Clue 4 found!")}
-        />
-        {/* Ground collider */}
-        {/*         <CuboidCollider args={[50, 1, 50]} position={[0, -1, 0]} />
-         */}
+
+        {/* Clues only AFTER Simon */}
+        {simonComplete && (
+          <>
+            <Clue
+              position={[-2, 0.5, 11.5]}
+              message="The answer lies near the roots."
+            />
+            <Clue
+              position={[2, 0.5, 13]}
+              message="A tree holds more than leaves."
+            />
+            <Clue
+              position={[4.5, 0.5, 4]}
+              message="Seek the whisper in silence."
+            />
+            <Clue position={[-2, 0.5, 7]} message="Truth is often mirrored." />
+          </>
+        )}
       </Physics>
 
-      {/* 🌟 Post-processing bloom effect */}
       <EffectComposer>
         <Bloom
           intensity={1.5}

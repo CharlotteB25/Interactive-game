@@ -3,6 +3,8 @@ import { Html } from "@react-three/drei";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
+// thomas was here
+
 const correctAnswer = "knowledge"; // The answer to the riddle
 
 export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {

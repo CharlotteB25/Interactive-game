@@ -7,10 +7,10 @@ export default function BuildingColliders({ position = [0, 0, 0] }) {
       {/* Actual colliders */}
       <CuboidCollider args={[12, 1, 35]} position={[0, -0.5, 0]} />
       <CuboidCollider args={[12, 10, 5]} position={[0, 5, 24]} />
+
       <CuboidCollider args={[5, 10, 10]} position={[0, 5, -14]} />
       <CuboidCollider args={[1, 10, 30]} position={[-7.5, 5, 0]} />
       <CuboidCollider args={[1, 10, 30]} position={[8, 5, 0]} />
-
       {/* Debug visuals (so I can tell which collider is which 😍) */}
       {/* <mesh position={[0, 0, 0]}>
         <boxGeometry args={[12, 1, 35]} />
