@@ -1,10 +1,9 @@
 // components/FireflyCatch.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Html, Float } from "@react-three/drei";
+import { Html } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-// Soft radial glow (no external textures)
 function useGlowTexture() {
   return useMemo(() => {
     const size = 64;
@@ -30,42 +29,39 @@ function useGlowTexture() {
   }, []);
 }
 
-/**
- * Firefly mini-game
- * - Walk near a firefly and press Space to catch it
- * - When all are caught, calls onComplete()
- */
 export default function FireflyCatch({
   count = 8,
-  areaRadius = 6, // spawn radius around the scene origin (x/z)
+  areaRadius = 10,
   minY = 1.2,
-  maxY = 3.5,
-  catchDistance = 1.4, // how close to be able to catch
+  maxY = 4.6,
+  catchDistance = 1.4,
+  maxVisibleDistance = 60,
   onComplete,
 }) {
   const { camera } = useThree();
 
   const glowTex = useGlowTexture();
-  const spriteRefs = useRef(Array.from({ length: count }, () => null));
-  const lightRefs = useRef(Array.from({ length: count }, () => null));
+  const spriteRefs = useRef([]);
+  const acc = useRef(0);
+  const nearIndexRef = useRef(-1);
 
-  // base positions + animation seeds
+  if (spriteRefs.current.length !== count) {
+    spriteRefs.current = Array.from({ length: count }, () => null);
+  }
+
   const bases = useMemo(
     () =>
-      Array.from({ length: count }, (_, i) => {
-        const ang = (i / count) * Math.PI * 2 + Math.random() * 0.6;
-        const r = areaRadius * (0.55 + Math.random() * 0.45);
-        const x = Math.cos(ang) * r;
-        const z = Math.sin(ang) * r;
-        const y = minY + Math.random() * (maxY - minY);
-        return {
-          x,
-          y,
-          z,
-          sp: 0.6 + Math.random() * 0.6,
-          phase: Math.random() * 10,
-        };
-      }),
+      Array.from({ length: count }, () => ({
+        baseX: (Math.random() - 0.5) * areaRadius * 2,
+        baseZ: (Math.random() - 0.5) * areaRadius * 2,
+        baseY: minY + Math.random() * (maxY - minY),
+        sp: 1.2 + Math.random(),
+        phase: Math.random() * 10,
+        orbitR: 0.8 + Math.random() * 1.5,
+        orbitS: 0.25 + Math.random() * 0.6,
+        orbitAngle: Math.random() * Math.PI * 2,
+        wobbleAngle: Math.random() * Math.PI * 2,
+      })),
     [count, areaRadius, minY, maxY]
   );
 
@@ -87,122 +83,120 @@ export default function FireflyCatch({
   const [nearIndex, setNearIndex] = useState(-1);
   const [started, setStarted] = useState(false);
 
-  // Key input: Space to catch nearest
+  useEffect(() => {
+    spriteRefs.current.forEach((s) => s && (s.frustumCulled = false));
+  });
+
   useEffect(() => {
     const onKey = (e) => {
       const isSpace =
         e.code === "Space" || e.key === " " || e.key === "Spacebar";
       if (!isSpace || !started) return;
-      if (nearIndex !== -1 && !caught[nearIndex]) {
+      const i = nearIndexRef.current;
+      if (i !== -1 && !caught[i]) {
         setCaught((prev) => {
           const next = prev.slice();
-          next[nearIndex] = true;
+          next[i] = true;
           return next;
         });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [nearIndex, caught, started]);
+  }, [caught, started]);
 
-  // Animate + proximity check
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
+  useFrame((_, delta) => {
+    acc.current += delta;
+    if (acc.current < 1 / 30) return; // ~30fps logic
+    const step = acc.current;
+    acc.current = 0;
 
     let closest = -1;
-    let bestDist = Infinity;
+    let bestD2 = Infinity;
+
+    const cam = camera.position;
+    const catchD2 = catchDistance * catchDistance;
+    const visD2 = maxVisibleDistance * maxVisibleDistance;
 
     for (let i = 0; i < count; i++) {
       const spr = spriteRefs.current[i];
-      const light = lightRefs.current[i];
-      if (!spr || !light) continue;
+      if (!spr) continue;
 
-      // Animate wandering around base
-      const b = bases[i];
-      const wobX = Math.sin(t * b.sp + b.phase) * 0.6;
-      const wobZ = Math.cos(t * (b.sp * 0.9) + b.phase * 1.3) * 0.6;
-      const wobY = Math.sin(t * (b.sp * 1.6) + b.phase) * 0.25;
-
-      const x = b.x + wobX;
-      const y = THREE.MathUtils.clamp(b.y + wobY, minY, maxY);
-      const z = b.z + wobZ;
-
-      spr.position.set(x, y, z);
-      light.position.set(x, y, z);
-
-      // Pulse
-      const pulse =
-        0.55 +
-        Math.max(
-          0,
-          Math.sin(t * (caught[i] ? 1.5 : 4.0)) * (caught[i] ? 0.15 : 0.35)
-        );
-      spr.scale.setScalar(caught[i] ? 0.25 + pulse * 0.15 : 0.45 + pulse * 0.2);
-      light.intensity = caught[i]
-        ? 0.0
-        : 2.6 + Math.max(0, Math.sin(t * 6) * 0.9);
-
-      // Proximity (only for uncaught)
-      if (!caught[i]) {
-        const dx = camera.position.x - x;
-        const dy = camera.position.y - y;
-        const dz = camera.position.z - z;
-        const d = Math.hypot(dx, dy, dz);
-        if (d < bestDist) {
-          bestDist = d;
-          closest = i;
-        }
+      if (caught[i]) {
+        spr.visible = false;
+        continue;
       }
 
-      // Hide when caught (quick fade out)
-      spr.visible = !caught[i];
-      light.visible = !caught[i];
+      const b = bases[i];
+      b.orbitAngle += step * b.orbitS;
+      b.wobbleAngle += step * b.sp;
+
+      const cx = b.baseX + Math.cos(b.orbitAngle + b.phase) * b.orbitR;
+      const cz = b.baseZ + Math.sin(b.orbitAngle + b.phase) * b.orbitR;
+
+      const x = cx + Math.sin(b.wobbleAngle) * 1.0;
+      const z = cz + Math.cos(b.wobbleAngle * 0.95 + b.phase * 1.3) * 1.0;
+      const y = THREE.MathUtils.clamp(
+        b.baseY + Math.sin(b.wobbleAngle * 1.4) * 0.35,
+        minY,
+        maxY
+      );
+
+      spr.position.set(x, y, z);
+
+      const dx = cam.x - x,
+        dy = cam.y - y,
+        dz = cam.z - z;
+      const d2 = dx * dx + dy * dy + dz * dz;
+
+      const visible = d2 < visD2;
+      spr.visible = visible;
+      if (!visible) continue;
+
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        closest = i;
+      }
+
+      const s = 0.45 + Math.sin(b.wobbleAngle * 2.2) * 0.12;
+      spr.scale.setScalar(s);
     }
 
-    setNearIndex(bestDist <= catchDistance ? closest : -1);
+    const newNear = bestD2 <= catchD2 ? closest : -1;
+    if (newNear !== nearIndexRef.current) {
+      nearIndexRef.current = newNear;
+      setNearIndex(newNear);
+    }
   });
 
-  // Completion
   useEffect(() => {
-    if (caughtCount === count && started) {
-      onComplete?.();
-    }
+    if (caughtCount === count && started) onComplete?.();
   }, [caughtCount, count, started, onComplete]);
 
   return (
     <group>
-      {/* Fireflies */}
       {Array.from({ length: count }).map((_, i) => (
-        <Float key={i} floatIntensity={1.2} rotationIntensity={0.1}>
-          {/* Glow sprite */}
-          <sprite
-            ref={(r) => (spriteRefs.current[i] = r)}
-            scale={[0.6, 0.6, 0.6]}
-          >
-            <spriteMaterial
-              map={glowTex}
-              color={colors[i]}
-              transparent
-              opacity={0.9}
-              depthWrite={false}
-              blending={THREE.AdditiveBlending}
-            />
-          </sprite>
-
-          {/* Little point light */}
-          <pointLight
-            ref={(r) => (lightRefs.current[i] = r)}
+        <sprite
+          key={i}
+          ref={(r) => (spriteRefs.current[i] = r)}
+          scale={[0.6, 0.6, 0.6]}
+        >
+          <spriteMaterial
+            map={glowTex}
             color={colors[i]}
-            intensity={0}
-            distance={3.5}
-            decay={2}
+            transparent
+            opacity={0.9}
+            depthWrite={false}
+            depthTest={false} // <- see through foliage
+            toneMapped={false}
+            blending={THREE.AdditiveBlending}
           />
-        </Float>
+        </sprite>
       ))}
 
-      {/* Intro overlay */}
+      {/* Start overlay — enable pointer events on the Html wrapper */}
       {!started && (
-        <Html fullscreen>
+        <Html fullscreen style={{ pointerEvents: "auto", zIndex: 1000 }}>
           <div
             style={{
               position: "fixed",
@@ -210,7 +204,6 @@ export default function FireflyCatch({
               display: "grid",
               placeItems: "center",
               background: "rgba(0,0,0,0.6)",
-              zIndex: 50,
             }}
           >
             <div
@@ -251,48 +244,54 @@ export default function FireflyCatch({
         </Html>
       )}
 
-      {/* Fixed HUD (like Perf/Leva) */}
-      {started && (
-        <Html fullscreen>
+      {/* Intro overlay */}
+      {!started && (
+        <Html fullscreen style={{ pointerEvents: "auto", zIndex: 1000 }}>
           <div
+            onClick={() => setStarted(true)} // <-- click anywhere to start
             style={{
               position: "fixed",
-              top: 12,
-              right: 12,
-              zIndex: 40,
-              pointerEvents: "auto",
+              inset: 0,
+              display: "grid",
+              placeItems: "center",
+              background: "rgba(0,0,0,0.6)",
+              cursor: "pointer", // visual hint
             }}
           >
             <div
               style={{
-                background: "rgba(17,17,17,0.85)",
-                color: "white",
-                padding: "10px 12px",
-                borderRadius: 10,
-                fontSize: 12,
-                lineHeight: 1.35,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
-                minWidth: 220,
-                backdropFilter: "blur(4px)",
+                width: "min(92vw, 520px)",
+                background: "white",
+                color: "#111",
+                borderRadius: 16,
+                boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+                padding: 24,
+                textAlign: "center",
+                cursor: "auto", // normal cursor over card
               }}
             >
-              <div
+              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+                Catch the Fireflies
+              </div>
+              <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 16 }}>
+                Walk up to a firefly and press <b>Space</b> to catch it. Catch
+                them all to continue.
+              </div>
+              <button
+                onClick={() => setStarted(true)} // button still works
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  border: 0,
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  color: "white",
+                  background: "#16a34a",
+                  minWidth: 140,
                 }}
               >
-                <div style={{ fontWeight: 700 }}>Fireflies</div>
-                <div style={{ opacity: 0.85 }}>
-                  {caughtCount} / {count}
-                </div>
-              </div>
-              <div style={{ marginTop: 6, opacity: 0.9 }}>
-                {nearIndex !== -1
-                  ? "Press Space to catch"
-                  : "Find a nearby firefly"}
-              </div>
+                Start
+              </button>
             </div>
           </div>
         </Html>

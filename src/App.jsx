@@ -72,7 +72,12 @@ function AppInner() {
     <Fragment>
       <div style={{ position: "relative", width: "100%", height: "100vh" }}>
         <Canvas
-          shadows
+          dpr={[1, 1.25]}
+          onCreated={({ scene }) => {
+            scene.background = null; // make sure Drei can set it
+            scene.environment = null;
+          }}
+          shadows={false}
           camera={{ fov: 45, near: 0.1, far: 100, position: [0, 0, -25] }}
         >
           <SceneSwitch />
