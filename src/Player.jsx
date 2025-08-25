@@ -1,3 +1,4 @@
+// Player.jsx
 import { useRef, useEffect } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
@@ -5,35 +6,37 @@ import { RigidBody, CylinderCollider } from "@react-three/rapier";
 import * as THREE from "three";
 
 import footstepSound from "./assets/sounds/footsteps.ogg";
-import bgMusic from "./assets/sounds/backgroundMusic.wav";
 
 const SPEED = 2;
 
 export default function Player({ start = [1, 0, 7] }) {
-  const { camera, gl } = useThree();
+  const { camera } = useThree();
   const playerRef = useRef();
 
   const keysPressed = useRef({ w: false, a: false, s: false, d: false });
   const isWalking = useRef(false);
 
-  // Footstep sound while player moves
-  const footstepAudio = useRef(new Audio(footstepSound));
-  footstepAudio.current.loop = true;
-  footstepAudio.current.volume = 0.3;
-  footstepAudio.current.playbackRate = 1.2;
+  // Footsteps (looped while moving)
+  const footstepAudio = useRef(null);
+  useEffect(() => {
+    const a = new Audio(footstepSound);
+    a.loop = true;
+    a.volume = 0.3;
+    a.playbackRate = 1.2;
+    footstepAudio.current = a;
 
-  // Cozy Background music
-  const musicRef = useRef(new Audio(bgMusic));
-  const hasStartedMusic = useRef(false);
+    return () => {
+      a.pause();
+      a.currentTime = 0;
+      footstepAudio.current = null;
+    };
+  }, []);
 
-  musicRef.current.loop = true;
-  musicRef.current.volume = 0.4;
-
-  // Handle key presses - movement controls
+  // Keyboard movement
   const handleKey = (key, pressed) => {
-    const lowercase = key.toLowerCase();
-    if (["w", "a", "s", "d"].includes(lowercase)) {
-      keysPressed.current[lowercase] = pressed;
+    const k = key.toLowerCase();
+    if (k === "w" || k === "a" || k === "s" || k === "d") {
+      keysPressed.current[k] = pressed;
     }
   };
 
@@ -48,30 +51,7 @@ export default function Player({ start = [1, 0, 7] }) {
     };
   }, []);
 
-  // ✅ Play music once PointerLock is activated
-  useEffect(() => {
-    const handleClick = () => {
-      if (!hasStartedMusic.current) {
-        musicRef.current
-          .play()
-          .then(() => {
-            hasStartedMusic.current = true;
-            console.log("Background music started");
-          })
-          .catch((e) => {
-            console.warn("Autoplay blocked", e);
-          });
-      }
-    };
-    // Add click listener to the canvas
-    // This ensures the music starts only after user interaction
-    // needed to add this for autoplay policies in browsers
-    const dom = gl.domElement;
-    dom.addEventListener("click", handleClick);
-    return () => dom.removeEventListener("click", handleClick);
-  }, [gl]);
-
-  // Pointer lock controls - camera movement - adjusts camera position based on player movement. So forward is always forward relative to the camera.
+  // Movement + camera follow
   useFrame(() => {
     if (!playerRef.current) return;
 
@@ -91,8 +71,9 @@ export default function Player({ start = [1, 0, 7] }) {
       keysPressed.current.d;
 
     if (isMoving) {
-      if (!isWalking.current) {
-        footstepAudio.current.play();
+      if (!isWalking.current && footstepAudio.current) {
+        // By this time the user has clicked (pointer lock), so playback is allowed
+        footstepAudio.current.play().catch(() => {});
         isWalking.current = true;
       }
 
@@ -104,12 +85,11 @@ export default function Player({ start = [1, 0, 7] }) {
       direction.normalize().multiplyScalar(SPEED);
       playerRef.current.setLinvel(direction, true);
     } else {
-      if (isWalking.current) {
+      if (isWalking.current && footstepAudio.current) {
         footstepAudio.current.pause();
         footstepAudio.current.currentTime = 0;
         isWalking.current = false;
       }
-
       playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
     }
 

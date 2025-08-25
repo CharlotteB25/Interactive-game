@@ -34,16 +34,16 @@ export default function FireflyCatch({
   areaRadius = 10,
   minY = 1.2,
   maxY = 4.6,
-  catchDistance = 1.4,
+  catchDistance = 4.0, // auto-catch when you walk through one
   maxVisibleDistance = 60,
   onComplete,
 }) {
   const { camera } = useThree();
 
+  // ----- visual particles -----
   const glowTex = useGlowTexture();
   const spriteRefs = useRef([]);
   const acc = useRef(0);
-  const nearIndexRef = useRef(-1);
 
   if (spriteRefs.current.length !== count) {
     spriteRefs.current = Array.from({ length: count }, () => null);
@@ -78,41 +78,24 @@ export default function FireflyCatch({
     [count]
   );
 
+  // ----- gameplay state -----
   const [caught, setCaught] = useState(() => Array(count).fill(false));
   const caughtCount = caught.filter(Boolean).length;
-  const [nearIndex, setNearIndex] = useState(-1);
-  const [started, setStarted] = useState(false);
 
+  // local stage & overlays live here (intro -> playing -> complete)
+  const [stage, setStage] = useState("intro");
+
+  // ensure sprites always render even if behind trees
   useEffect(() => {
     spriteRefs.current.forEach((s) => s && (s.frustumCulled = false));
-  });
+  }, []);
 
-  useEffect(() => {
-    const onKey = (e) => {
-      const isSpace =
-        e.code === "Space" || e.key === " " || e.key === "Spacebar";
-      if (!isSpace || !started) return;
-      const i = nearIndexRef.current;
-      if (i !== -1 && !caught[i]) {
-        setCaught((prev) => {
-          const next = prev.slice();
-          next[i] = true;
-          return next;
-        });
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [caught, started]);
-
+  // motion + auto-catch
   useFrame((_, delta) => {
     acc.current += delta;
-    if (acc.current < 1 / 30) return; // ~30fps logic
+    if (acc.current < 1 / 30) return;
     const step = acc.current;
     acc.current = 0;
-
-    let closest = -1;
-    let bestD2 = Infinity;
 
     const cam = camera.position;
     const catchD2 = catchDistance * catchDistance;
@@ -144,35 +127,38 @@ export default function FireflyCatch({
 
       spr.position.set(x, y, z);
 
+      // visibility
       const dx = cam.x - x,
         dy = cam.y - y,
         dz = cam.z - z;
       const d2 = dx * dx + dy * dy + dz * dz;
+      spr.visible = d2 < visD2;
 
-      const visible = d2 < visD2;
-      spr.visible = visible;
-      if (!visible) continue;
-
-      if (d2 < bestD2) {
-        bestD2 = d2;
-        closest = i;
+      // auto-catch while playing
+      if (stage === "playing" && d2 <= catchD2) {
+        setCaught((prev) => {
+          if (prev[i]) return prev;
+          const next = prev.slice();
+          next[i] = true;
+          return next;
+        });
       }
 
+      // little breathing scale
       const s = 0.45 + Math.sin(b.wobbleAngle * 2.2) * 0.12;
       spr.scale.setScalar(s);
     }
-
-    const newNear = bestD2 <= catchD2 ? closest : -1;
-    if (newNear !== nearIndexRef.current) {
-      nearIndexRef.current = newNear;
-      setNearIndex(newNear);
-    }
   });
 
+  // completion
   useEffect(() => {
-    if (caughtCount === count && started) onComplete?.();
-  }, [caughtCount, count, started, onComplete]);
+    if (stage === "playing" && caughtCount === count) {
+      setStage("complete");
+      onComplete?.();
+    }
+  }, [caughtCount, count, stage, onComplete]);
 
+  // ====== RENDER ======
   return (
     <group>
       {Array.from({ length: count }).map((_, i) => (
@@ -187,111 +173,161 @@ export default function FireflyCatch({
             transparent
             opacity={0.9}
             depthWrite={false}
-            depthTest={false} // <- see through foliage
+            depthTest={false}
             toneMapped={false}
             blending={THREE.AdditiveBlending}
           />
         </sprite>
       ))}
 
-      {/* Start overlay — enable pointer events on the Html wrapper */}
-      {!started && (
-        <Html fullscreen style={{ pointerEvents: "auto", zIndex: 1000 }}>
+      {/* INTRO overlay (same style as your previous cards) */}
+      {stage === "intro" && (
+        <Html
+          fullscreen
+          zIndexRange={[1000, 2000]}
+          style={{ pointerEvents: "auto" }}
+        >
           <div
             style={{
               position: "fixed",
               inset: 0,
               display: "grid",
               placeItems: "center",
-              background: "rgba(0,0,0,0.6)",
+              background: "rgba(0,0,0,0.7)",
             }}
           >
             <div
               style={{
                 width: "min(92vw, 520px)",
-                background: "white",
-                color: "#111",
-                borderRadius: 16,
-                boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-                padding: 24,
+                background: "rgba(0,0,0,0.85)",
+                color: "#e2e8f0",
+                borderRadius: 10,
+                padding: "28px 32px",
                 textAlign: "center",
+                fontFamily: `"Courier New", monospace`,
+                boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+                backdropFilter: "blur(6px)",
+                border: "1px solid rgba(148,163,184,0.2)",
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
-                Catch the Fireflies
-              </div>
-              <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 16 }}>
-                Walk up to a firefly and press <b>Space</b> to catch it. Catch
-                them all to continue.
-              </div>
-              <button
-                onClick={() => setStarted(true)}
+              <div
                 style={{
-                  padding: "12px 16px",
-                  borderRadius: 12,
-                  border: 0,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  color: "white",
-                  background: "#16a34a",
-                  minWidth: 140,
+                  fontWeight: 700,
+                  fontSize: 22,
+                  marginBottom: 12,
+                  color: "#10b981",
+                  letterSpacing: 1,
                 }}
               >
-                Start
+                FIREFLY CATCH
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 18,
+                    background: "#10b981",
+                    marginLeft: 8,
+                    verticalAlign: "-2px",
+                    animation: "blink 1.2s steps(1,end) infinite",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  opacity: 0.85,
+                  marginBottom: 20,
+                  lineHeight: 1.4,
+                }}
+              >
+                Chase the glowing fireflies and walk through them to collect.
+                <br />
+                Collect all <b>{count}</b> to proceed.
+              </div>
+              <button
+                onClick={() => setStage("playing")}
+                style={{
+                  padding: "12px 18px",
+                  borderRadius: 6,
+                  border: "1px solid #10b981",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontFamily: `"Courier New", monospace`,
+                  color: "#10b981",
+                  background: "transparent",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "rgba(16,185,129,0.1)")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
+              >
+                START
               </button>
+
+              <style>
+                {`
+                  @keyframes blink {
+                    0%, 49% { opacity: 1; }
+                    50%, 100% { opacity: 0; }
+                  }
+                `}
+              </style>
             </div>
           </div>
         </Html>
       )}
 
-      {/* Intro overlay */}
-      {!started && (
-        <Html fullscreen style={{ pointerEvents: "auto", zIndex: 1000 }}>
+      {/* HUD while playing (top-right, same style) */}
+      {stage === "playing" && (
+        <Html
+          fullscreen
+          zIndexRange={[900, 2000]}
+          style={{ pointerEvents: "auto" }}
+        >
           <div
-            onClick={() => setStarted(true)} // <-- click anywhere to start
             style={{
               position: "fixed",
-              inset: 0,
-              display: "grid",
-              placeItems: "center",
-              background: "rgba(0,0,0,0.6)",
-              cursor: "pointer", // visual hint
+              top: 12,
+              right: 12,
             }}
           >
             <div
               style={{
-                width: "min(92vw, 520px)",
-                background: "white",
-                color: "#111",
-                borderRadius: 16,
-                boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
-                padding: 24,
-                textAlign: "center",
-                cursor: "auto", // normal cursor over card
+                background: "rgba(0,0,0,0.85)",
+                color: "#f1f5f9",
+                padding: "12px 14px",
+                borderRadius: 8,
+                fontSize: 13,
+                lineHeight: 1.4,
+                minWidth: 220,
+                fontFamily: `"Courier New", monospace`,
+                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                backdropFilter: "blur(6px)",
+                border: "1px solid rgba(148,163,184,0.2)",
               }}
             >
-              <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
-                Catch the Fireflies
-              </div>
-              <div style={{ fontSize: 14, opacity: 0.85, marginBottom: 16 }}>
-                Walk up to a firefly and press <b>Space</b> to catch it. Catch
-                them all to continue.
-              </div>
-              <button
-                onClick={() => setStarted(true)} // button still works
+              <div
                 style={{
-                  padding: "12px 16px",
-                  borderRadius: 12,
-                  border: 0,
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  color: "white",
-                  background: "#16a34a",
-                  minWidth: 140,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  marginBottom: 6,
                 }}
               >
-                Start
-              </button>
+                <div style={{ fontWeight: 700, color: "#10b981" }}>
+                  FIREFLY CATCH
+                </div>
+                <div style={{ opacity: 0.85 }}>
+                  Fireflies: {caughtCount} / {count}
+                </div>
+              </div>
+              <div style={{ opacity: 0.9 }}>
+                Walk through a firefly to collect it.
+              </div>
             </div>
           </div>
         </Html>

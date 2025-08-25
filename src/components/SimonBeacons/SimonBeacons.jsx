@@ -37,21 +37,35 @@ export default function SimonBeacons({
   // Reveal sequence pulses when (revealing) flips true
   useEffect(() => {
     if (!revealing || sequence.length === 0) return;
+
+    // tweakable timings
+    const preDelayMs = 1200; // delay before each reveal (incl. first)
+    const paceMs = 700; // time between flashes
+    const flashMs = 450; // how long a pad stays lit
+
     let i = -1;
-    const pace = 700;
+    let int;
     const tick = () => {
       i++;
       if (i >= sequence.length) {
         setActiveIdx(-1);
-        endReveal();
+        endReveal(); // hand control back to input
         return;
       }
       setActiveIdx(sequence[i]);
-      setTimeout(() => setActiveIdx(-1), 420);
+      // turn off after flashMs
+      setTimeout(() => setActiveIdx(-1), flashMs);
     };
-    tick();
-    const int = setInterval(tick, pace);
-    return () => clearInterval(int);
+
+    const pre = setTimeout(() => {
+      tick();
+      int = setInterval(tick, paceMs);
+    }, preDelayMs);
+
+    return () => {
+      clearTimeout(pre);
+      if (int) clearInterval(int);
+    };
   }, [revealing, sequence, setActiveIdx, endReveal]);
 
   // Animate brightness + compute proximity

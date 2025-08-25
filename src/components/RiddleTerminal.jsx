@@ -3,86 +3,149 @@ import { Html } from "@react-three/drei";
 import { RigidBody } from "@react-three/rapier";
 import * as THREE from "three";
 
-// thomas was here
-
-const correctAnswer = "knowledge"; // The answer to the riddle
+const correctAnswer = "knowledge";
 
 export default function RiddleTerminal({ onSolved, position = [0, 1, 0] }) {
   const [userInput, setUserInput] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [isGood, setIsGood] = useState(null); // null | true | false
   const inputRef = useRef();
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (userInput.trim().toLowerCase() === correctAnswer) {
-      setFeedback("✅ Correct! Unlocking...");
-      onSolved?.(); // notify parent
+    const ok = userInput.trim().toLowerCase() === correctAnswer;
+    setIsGood(ok);
+    if (ok) {
+      setFeedback("✅ ACCESS GRANTED — unlocking…");
+      onSolved?.();
     } else {
-      setFeedback("❌ Nope. Try again!");
-      // Play a fail sound or animation here
+      setFeedback("❌ ACCESS DENIED — try again.");
     }
   };
 
   return (
     <RigidBody type="fixed" position={position}>
-      {/* Optional: Replace with a magical book model or glowing orb */}
-      {/* <mesh>
-        <boxGeometry args={[1.5, 1.2, 0.2]} />
-        <meshStandardMaterial color="purple" />
-      </mesh>
-      */}
       <Html position={[-0.5, 1.5, 0]}>
         <div
           style={{
-            background: "rgba(0,0,0,0.75)",
-            padding: "1rem",
-            borderRadius: "10px",
-            width: "220px",
-            color: "white",
-            textAlign: "center",
-            fontFamily: "CosyFont",
+            background: "rgba(0,0,0,0.85)",
+            color: "#e2e8f0",
+            padding: "16px 18px",
+            width: 260,
+            borderRadius: 10,
+            boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
+            backdropFilter: "blur(6px)",
+            fontFamily: `"Courier New", monospace`,
+            textAlign: "left",
+            border: "1px solid rgba(148,163,184,0.2)",
           }}
         >
-          <p>
-            <strong>🧠 Riddle:</strong>
-          </p>
-          <p style={{ fontSize: "0.9rem" }}>
+          {/* Title */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 10,
+              color: "#10b981",
+              fontWeight: 700,
+              letterSpacing: 1,
+              fontSize: 14,
+              textTransform: "uppercase",
+            }}
+          >
+            <span>RIDDLE TERMINAL</span>
+            <span
+              aria-hidden
+              style={{
+                width: 8,
+                height: 14,
+                background: "#10b981",
+                display: "inline-block",
+                animation: "blink 1.2s steps(1,end) infinite",
+              }}
+            />
+          </div>
+
+          {/* Question */}
+          <p style={{ margin: "6px 0 10px 0", lineHeight: 1.35 }}>
             What grows with sharing
             <br />
             but shrinks with silence?
           </p>
+
+          {/* Input */}
           <form onSubmit={handleSubmit}>
             <input
               type="text"
               ref={inputRef}
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Your answer..."
+              placeholder="> type answer and press Enter"
+              autoComplete="off"
+              spellCheck={false}
               style={{
                 width: "100%",
-                padding: "0.3rem",
-                marginTop: "0.5rem",
-                borderRadius: "5px",
-                border: "none",
-                fontFamily: "CosyFont",
+                padding: "10px 12px",
+                borderRadius: 6,
+                background: "rgba(2,6,23,0.6)",
+                color: "#f8fafc",
+                border: `1px solid ${
+                  isGood === null
+                    ? "rgba(148,163,184,0.35)"
+                    : isGood
+                    ? "rgba(16,185,129,0.9)"
+                    : "rgba(248,113,113,0.9)"
+                }`,
+                outline: "none",
+                fontFamily: `"Courier New", monospace`,
+                fontSize: 13,
+                boxShadow:
+                  isGood === null
+                    ? "0 0 0 0 rgba(0,0,0,0)"
+                    : isGood
+                    ? "0 0 18px rgba(16,185,129,0.25)"
+                    : "0 0 18px rgba(248,113,113,0.25)",
+                transition: "box-shadow 160ms ease, border-color 160ms ease",
+              }}
+              onFocus={(e) => {
+                if (isGood === null) {
+                  e.currentTarget.style.boxShadow =
+                    "0 0 18px rgba(148,163,184,0.25)";
+                }
+              }}
+              onBlur={(e) => {
+                if (isGood === null) {
+                  e.currentTarget.style.boxShadow = "none";
+                }
               }}
             />
           </form>
+
+          {/* Feedback */}
           <p
             style={{
-              marginTop: "0.5rem",
-              fontSize: "0.8rem",
-              fontFamily: "CosyFont",
+              marginTop: 8,
+              fontSize: 12,
+              color:
+                isGood === null ? "#cbd5e1" : isGood ? "#10b981" : "#f87171",
+              minHeight: 18,
             }}
           >
             {feedback}
           </p>
+
+          {/* Tiny scoped keyframes */}
+          <style>
+            {`
+              @keyframes blink {
+                0%, 49% { opacity: 1; }
+                50%, 100% { opacity: 0; }
+              }
+            `}
+          </style>
         </div>
       </Html>
     </RigidBody>
   );
 }
-// Note: You can add sound effects or animations for correct/incorrect answers
-// by using the useEffect hook to play audio files or trigger animations when the feedback state changes.
-// You can also use the onSolved prop to trigger any parent component logic, like unlocking a door or revealing a secret passage.
-// Make sure to import this component in your main scene and pass the onSolved prop to handle the riddle completion logic.

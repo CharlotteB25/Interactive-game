@@ -1,0 +1,15 @@
+// src/components/ForestModels/<Name>/<Name>.jsx
+import React, { useMemo } from "react";
+import { useGLTF, Center } from "@react-three/drei";
+import url from "./laptop.glb";
+
+export default function Computer(props) {
+  const { scene } = useGLTF(url);
+  const clone = useMemo(() => scene.clone(), [scene]);
+  return (
+    <Center {...props}>
+      <primitive object={clone} scale={0.15} position={[0, 1.5, 0]} />
+    </Center>
+  );
+}
+useGLTF.preload(url);
