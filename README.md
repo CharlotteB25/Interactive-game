@@ -29,7 +29,7 @@ If you want to run this project locally after downloading/cloning it from GitHub
    ```
 
 4. **Open in browser**  
-   Once the server is running, open the local address (usually [http://localhost:5173](http://localhost:5173)) to see the project.
+   Once the server is running, open the local address to see the project.
 
 ## Project Features
 
@@ -53,5 +53,8 @@ If you want to run this project locally after downloading/cloning it from GitHub
   - [freesound.org](https://freesound.org) — Migfus20, BurghRecords, PearceL, 5ro4
 
 ---
+
+- **Music by**:
+  Game is also available on Vercel: https://interactive-game-beta.vercel.app/
 
 🚀 You can now explore, customize, and expand this template for your own XR projects!
