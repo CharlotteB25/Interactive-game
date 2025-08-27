@@ -65,10 +65,9 @@ export default function StartOverlay() {
         <div
           style={{
             position: "absolute",
-            top: "50%",
-            left: "50%",
+            top: "100%",
+            left: "100%",
             width: "min(720px, 92vw)",
-            transform: "translate(-1000%, -1000%)",
             borderRadius: 12,
             padding: "24px 28px",
             fontFamily: palette.font,
