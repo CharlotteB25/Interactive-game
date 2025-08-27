@@ -68,7 +68,7 @@ export default function StartOverlay() {
             top: "50%",
             left: "50%",
             width: "min(720px, 92vw)",
-            transform: "translate(-100%, -50%)",
+            transform: "translate(-1000%, -1000%)",
             borderRadius: 12,
             padding: "24px 28px",
             fontFamily: palette.font,
