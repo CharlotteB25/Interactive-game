@@ -1,9 +1,46 @@
-// components/FireflyCatch.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Html } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { userSettings } from "../stores/userSettings";
 
+/* ---------- Minimal palette (same as Start/End/HUD) ---------- */
+function usePalette(theme = "system") {
+  const [sysDark, setSysDark] = useState(
+    typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    if (theme !== "system" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e) => setSysDark(e.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, [theme]);
+
+  const dark = theme === "dark" || (theme === "system" && sysDark);
+
+  return useMemo(() => {
+    const accent = dark ? "#9eceb5" : "#2563eb";
+    return {
+      dark,
+      scrim: dark ? "rgba(0,0,0,0.60)" : "rgba(255,255,255,0.60)",
+      panel: dark ? "rgba(17,17,18,0.90)" : "rgba(248,248,249,0.90)",
+      text: dark ? "#e6e7e9" : "#0b0d12",
+      subtext: dark ? "rgba(230,231,233,0.70)" : "rgba(11,13,18,0.65)",
+      accent,
+      accentSubtle: dark ? "rgba(158,206,181,0.16)" : "rgba(37,99,235,0.10)",
+      hairline: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
+      shadow: dark
+        ? "0 8px 24px rgba(0,0,0,0.35)"
+        : "0 8px 24px rgba(0,0,0,0.10)",
+      font: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans"',
+    };
+  }, [dark]);
+}
+
+/* ---------- Glow texture for sprites ---------- */
 function useGlowTexture() {
   return useMemo(() => {
     const size = 64;
@@ -31,14 +68,16 @@ function useGlowTexture() {
 
 export default function FireflyCatch({
   count = 8,
-  areaRadius = 10,
+  areaRadius = 12,
   minY = 1.2,
-  maxY = 4.6,
-  catchDistance = 4.0, // auto-catch when you walk through one
+  maxY = 3.6,
+  catchDistance = 2.5,
   maxVisibleDistance = 60,
   onComplete,
 }) {
   const { camera } = useThree();
+  const { name, theme } = userSettings(); // ✅ get name + theme for personalization & palette
+  const palette = usePalette(theme);
 
   // ----- visual particles -----
   const glowTex = useGlowTexture();
@@ -81,8 +120,6 @@ export default function FireflyCatch({
   // ----- gameplay state -----
   const [caught, setCaught] = useState(() => Array(count).fill(false));
   const caughtCount = caught.filter(Boolean).length;
-
-  // local stage & overlays live here (intro -> playing -> complete)
   const [stage, setStage] = useState("intro");
 
   // ensure sprites always render even if behind trees
@@ -127,14 +164,13 @@ export default function FireflyCatch({
 
       spr.position.set(x, y, z);
 
-      // visibility
+      // visibility + catch
       const dx = cam.x - x,
         dy = cam.y - y,
         dz = cam.z - z;
       const d2 = dx * dx + dy * dy + dz * dz;
       spr.visible = d2 < visD2;
 
-      // auto-catch while playing
       if (stage === "playing" && d2 <= catchD2) {
         setCaught((prev) => {
           if (prev[i]) return prev;
@@ -144,7 +180,6 @@ export default function FireflyCatch({
         });
       }
 
-      // little breathing scale
       const s = 0.45 + Math.sin(b.wobbleAngle * 2.2) * 0.12;
       spr.scale.setScalar(s);
     }
@@ -157,6 +192,72 @@ export default function FireflyCatch({
       onComplete?.();
     }
   }, [caughtCount, count, stage, onComplete]);
+
+  // --------- shared UI styles ----------
+  const panelBase = {
+    background: palette.panel,
+    color: palette.text,
+    borderRadius: 12,
+    padding: "24px 28px",
+    fontFamily: palette.font,
+    boxShadow: palette.shadow,
+    border: `1px solid ${palette.hairline}`,
+    width: "min(520px, 92vw)",
+    textAlign: "center",
+    boxSizing: "border-box",
+  };
+
+  const titleStyle = {
+    fontWeight: 600,
+    fontSize: 20,
+    marginBottom: 10,
+    color: palette.accent,
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    letterSpacing: 0.3,
+  };
+
+  const subStyle = {
+    fontSize: 14,
+    color: palette.subtext,
+    lineHeight: 1.5,
+    marginBottom: 16,
+  };
+
+  const buttonAccent = {
+    padding: "10px 16px",
+    borderRadius: 10,
+    border: `1px solid ${palette.accent}`,
+    background: "transparent",
+    color: palette.accent,
+    fontWeight: 600,
+    fontFamily: palette.font,
+    cursor: "pointer",
+  };
+
+  const hudPanel = {
+    background: palette.panel,
+    color: palette.text,
+    padding: "12px 14px",
+    borderRadius: 10,
+    fontSize: 13,
+    lineHeight: 1.4,
+    minWidth: 220,
+    fontFamily: palette.font,
+    boxShadow: palette.shadow,
+    border: `1px solid ${palette.hairline}`,
+  };
+
+  const chip = {
+    padding: "2px 8px",
+    borderRadius: 999,
+    border: `1px solid ${palette.hairline}`,
+    background: palette.accentSubtle,
+    color: palette.text,
+    fontSize: 12,
+    fontWeight: 500,
+  };
 
   // ====== RENDER ======
   return (
@@ -180,7 +281,7 @@ export default function FireflyCatch({
         </sprite>
       ))}
 
-      {/* INTRO overlay (same style as your previous cards) */}
+      {/* INTRO overlay (minimalist) */}
       {stage === "intro" && (
         <Html
           fullscreen
@@ -193,79 +294,40 @@ export default function FireflyCatch({
               inset: 0,
               display: "grid",
               placeItems: "center",
-              background: "rgba(0,0,0,0.7)",
+              background: palette.scrim,
             }}
           >
-            <div
-              style={{
-                width: "min(92vw, 520px)",
-                background: "rgba(0,0,0,0.85)",
-                color: "#e2e8f0",
-                borderRadius: 10,
-                padding: "28px 32px",
-                textAlign: "center",
-                fontFamily: `"Courier New", monospace`,
-                boxShadow: "0 20px 50px rgba(0,0,0,0.6)",
-                backdropFilter: "blur(6px)",
-                border: "1px solid rgba(148,163,184,0.2)",
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 700,
-                  fontSize: 22,
-                  marginBottom: 12,
-                  color: "#10b981",
-                  letterSpacing: 1,
-                }}
-              >
-                FIREFLY CATCH
+            <div style={panelBase}>
+              <div style={titleStyle}>
+                Firefly Catch{name ? `, ${name}` : ""}
                 <span
                   aria-hidden
                   style={{
-                    display: "inline-block",
                     width: 8,
                     height: 18,
-                    background: "#10b981",
-                    marginLeft: 8,
-                    verticalAlign: "-2px",
+                    background: palette.accent,
                     animation: "blink 1.2s steps(1,end) infinite",
                   }}
                 />
               </div>
-              <div
-                style={{
-                  fontSize: 15,
-                  opacity: 0.85,
-                  marginBottom: 20,
-                  lineHeight: 1.4,
-                }}
-              >
+
+              <div style={subStyle}>
                 Chase the glowing fireflies and walk through them to collect.
                 <br />
                 Collect all <b>{count}</b> to proceed.
               </div>
+
               <button
                 onClick={() => setStage("playing")}
-                style={{
-                  padding: "12px 18px",
-                  borderRadius: 6,
-                  border: "1px solid #10b981",
-                  cursor: "pointer",
-                  fontWeight: 600,
-                  fontFamily: `"Courier New", monospace`,
-                  color: "#10b981",
-                  background: "transparent",
-                  transition: "all 0.2s ease",
-                }}
+                style={buttonAccent}
                 onMouseOver={(e) =>
-                  (e.currentTarget.style.background = "rgba(16,185,129,0.1)")
+                  (e.currentTarget.style.background = palette.accentSubtle)
                 }
                 onMouseOut={(e) =>
                   (e.currentTarget.style.background = "transparent")
                 }
               >
-                START
+                Start
               </button>
 
               <style>
@@ -281,51 +343,32 @@ export default function FireflyCatch({
         </Html>
       )}
 
-      {/* HUD while playing (top-right, same style) */}
+      {/* HUD while playing (top-right) */}
       {stage === "playing" && (
         <Html
           fullscreen
           zIndexRange={[900, 2000]}
           style={{ pointerEvents: "auto" }}
         >
-          <div
-            style={{
-              position: "fixed",
-              top: 12,
-              right: 12,
-            }}
-          >
-            <div
-              style={{
-                background: "rgba(0,0,0,0.85)",
-                color: "#f1f5f9",
-                padding: "12px 14px",
-                borderRadius: 8,
-                fontSize: 13,
-                lineHeight: 1.4,
-                minWidth: 220,
-                fontFamily: `"Courier New", monospace`,
-                boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                backdropFilter: "blur(6px)",
-                border: "1px solid rgba(148,163,184,0.2)",
-              }}
-            >
+          <div style={{ position: "fixed", top: 12, right: 12 }}>
+            <div style={hudPanel}>
               <div
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
+                  alignItems: "baseline",
                   gap: 12,
                   marginBottom: 6,
                 }}
               >
-                <div style={{ fontWeight: 700, color: "#10b981" }}>
-                  FIREFLY CATCH
+                <div style={{ fontWeight: 600 }}>
+                  Firefly Catch{name ? `, ${name}` : ""}
                 </div>
-                <div style={{ opacity: 0.85 }}>
-                  Fireflies: {caughtCount} / {count}
+                <div style={chip}>
+                  {caughtCount} / {count}
                 </div>
               </div>
-              <div style={{ opacity: 0.9 }}>
+              <div style={{ color: palette.subtext }}>
                 Walk through a firefly to collect it.
               </div>
             </div>

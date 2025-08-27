@@ -29,9 +29,9 @@ export default function Experience() {
 
       {stage === "experience" && (
         <>
-          <Perf position="top-left" />
+          {/*           <Perf position="top-left" />
+           */}{" "}
           <Lights theme={theme} />
-
           <Physics debug gravity={[0, -9.81, 0]}>
             {!simonComplete && (
               <SimonBeacons onComplete={() => setSimonComplete(true)} />
@@ -57,20 +57,19 @@ export default function Experience() {
               <>
                 <Clue
                   position={[-2, 0.5, 11.5]}
-                  message="The answer lies near the roots."
+                  message="Whispers spark minds"
                 />
                 <Clue
                   position={[4.5, 0.5, 4]}
-                  message="Seek the whisper in silence."
+                  message="But silence dims the flames"
                 />
                 <Clue
-                  position={[-2, 0.5, 7]}
-                  message="Truth is often mirrored."
+                  position={[-1.7, 0.5, 7]}
+                  message="Only by sharing do I grow"
                 />
               </>
             )}
           </Physics>
-
           <EffectComposer>
             <Bloom
               intensity={1.5}

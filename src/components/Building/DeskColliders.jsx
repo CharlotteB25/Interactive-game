@@ -17,7 +17,7 @@ export default function DeskColliders({ position = [0, 0, 0] }) {
       <CuboidCollider args={[0.00005, 1, 0.00005]} position={[3, 2, 11]} />
 
       {/* Debug visuals – left */}
-      <mesh position={[-2.05, 0, 2.5]}>
+      {/*  <mesh position={[-2.05, 0, 2.5]}>
         <boxGeometry args={[0.05, 2, 0.05]} />
         <meshStandardMaterial color="red" transparent opacity={0.2} />
       </mesh>
@@ -32,10 +32,10 @@ export default function DeskColliders({ position = [0, 0, 0] }) {
       <mesh position={[-1.75, 0, 12]}>
         <boxGeometry args={[0.05, 2, 0.05]} />
         <meshStandardMaterial color="purple" transparent opacity={0.2} />
-      </mesh>
+      </mesh> */}
 
       {/* Debug visuals – right */}
-      <mesh position={[3.05, 0, 2]}>
+      {/*   <mesh position={[3.05, 0, 2]}>
         <boxGeometry args={[0.05, 2, 0.05]} />
         <meshStandardMaterial color="red" transparent opacity={0.2} />
       </mesh>
@@ -50,7 +50,7 @@ export default function DeskColliders({ position = [0, 0, 0] }) {
       <mesh position={[3, 0, 10]}>
         <boxGeometry args={[0.05, 2, 0.05]} />
         <meshStandardMaterial color="purple" transparent opacity={0.2} />
-      </mesh>
+      </mesh> */}
     </RigidBody>
   );
 }

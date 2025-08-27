@@ -1,104 +1,127 @@
-import React, { useRef } from "react";
+import React, { useRef, useMemo, useState, useEffect } from "react";
 import { Html } from "@react-three/drei";
 import { userSettings } from "./stores/userSettings";
+
+// Palette hook (same as before)
+function usePalette(theme = "system") {
+  const [sysDark, setSysDark] = useState(
+    typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
+
+  useEffect(() => {
+    if (theme !== "system" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = (e) => setSysDark(e.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, [theme]);
+
+  const dark = theme === "dark" || (theme === "system" && sysDark);
+
+  return useMemo(() => {
+    const accent = dark ? "#9eceb5" : "#2563eb";
+    return {
+      dark,
+      scrim: dark ? "rgb(0,0,0,0)" : "rgb(255,255,255)",
+      panel: dark ? "rgb(17,17,18)" : "rgb(248,248,249)",
+      text: dark ? "#e6e7e9" : "#0b0d12",
+      subtext: dark ? "rgb(230,231,233)" : "rgb(11,13,18)",
+      accent,
+      accentSubtle: dark ? "rgb(158,206,181,0.16)" : "rgb(37,99,235,0.10)",
+      hairline: dark ? "rgb(255,255,255,0.06)" : "rgb(0,0,0,0.06)",
+      shadow: dark ? "0 8px 24px rgb(0,0,0)" : "0 8px 24px rgb(0,0,0)",
+      font: 'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans"',
+    };
+  }, [dark]);
+}
 
 export default function StartOverlay() {
   const { name, theme, music, setName, setTheme, setMusic, setStage } =
     userSettings();
   const startBtnRef = useRef(null);
+  const palette = usePalette(theme);
 
-  const panelStyle =
-    theme === "dark"
-      ? {
-          background: "rgba(0,0,0,0.85)",
-          color: "#e2e8f0",
-          border: "1px solid rgba(148,163,184,0.2)",
-        }
-      : {
-          background: "rgba(255,255,255,0.9)",
-          color: "#0f172a",
-          border: "1px solid rgba(15,23,42,0.15)",
-        };
-
-  const accent = theme === "dark" ? "#10b981" : "#0ea5e9";
-
-  // ✅ Start the central MusicManager audio in this trusted click
   const startExperience = async () => {
     try {
-      // try to play the audio element that MusicManager prepared
       await userSettings.getState()._playMusicFromHUD?.();
-    } catch (e) {
-      // ignore autoplay errors
-    }
-
-    // (Optional) tiny next-tick retry in case MusicManager attaches a millisecond later
+    } catch {}
     setTimeout(() => userSettings.getState()._playMusicFromHUD?.(), 0);
-
     setStage("experience");
   };
 
   return (
     <Html fullscreen>
-      {/* Full-screen veil */}
       <div
         style={{
           position: "fixed",
           inset: 0,
-          background:
-            theme === "dark" ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.6)",
+          background: palette.scrim,
           pointerEvents: "auto",
           zIndex: 2147483647,
         }}
       >
-        {/* Centered panel (absolute + translate) */}
         <div
           style={{
             position: "absolute",
             top: "50%",
             left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "720px",
-            maxWidth: "92vw",
+            transform: "translate(-110%, -100%)",
+            width: "min(720px, 92vw)",
+            borderRadius: 12,
+            padding: "24px 28px",
+            fontFamily: palette.font,
+            background: palette.panel,
+            color: palette.text,
+            boxShadow: palette.shadow,
+            border: `1px solid ${palette.hairline}`,
             boxSizing: "border-box",
-            borderRadius: 10,
-            padding: "28px 32px",
             textAlign: "left",
-            fontFamily: `"Courier New", monospace`,
-            boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-            backdropFilter: "blur(8px)",
-            ...panelStyle,
           }}
         >
           <div
             style={{
-              fontWeight: 700,
-              fontSize: 22,
+              fontWeight: 600,
+              fontSize: 20,
               marginBottom: 8,
-              color: accent,
-              letterSpacing: 1,
+              color: palette.accent,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
-            WELCOME TO THE FOREST OF FACTS
+            Welcome to the Forest of Facts
             <span
               aria-hidden
               style={{
-                display: "inline-block",
                 width: 8,
                 height: 18,
-                background: accent,
-                marginLeft: 8,
-                verticalAlign: "-2px",
+                background: palette.accent,
                 animation: "blink 1.2s steps(1,end) infinite",
               }}
             />
           </div>
 
-          <p style={{ opacity: 0.9, marginBottom: 16, lineHeight: 1.45 }}>
+          <p
+            style={{
+              fontSize: 14,
+              color: palette.subtext,
+              lineHeight: 1.5,
+              marginBottom: 16,
+            }}
+          >
             Explore, solve, and discover. Choose your mood, pick a soundtrack,
-            and tell us your name — we’ll personalize title cards just for you.
+            and add your name for a personal touch. Move around with WASD keys
+            and use your mouse to look around. When you do need to click on
+            something press esc and then use your mouse as normal. Enjoy the
+            journey!
           </p>
 
-          <label style={{ fontSize: 13, opacity: 0.85 }}>Your name</label>
+          {/* Name input */}
+          <label style={{ fontSize: 13, color: palette.subtext }}>
+            Your name
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -108,23 +131,21 @@ export default function StartOverlay() {
               marginTop: 6,
               marginBottom: 14,
               padding: "10px 12px",
-              borderRadius: 6,
-              background:
-                theme === "dark" ? "rgba(2,6,23,0.6)" : "rgba(241,245,249,0.8)",
-              color: "inherit",
-              border: `1px solid ${
-                theme === "dark"
-                  ? "rgba(148,163,184,0.35)"
-                  : "rgba(15,23,42,0.25)"
-              }`,
+              borderRadius: 8,
+              background: palette.dark ? "rgba(2,6,23)" : "rgba(241,245,249)",
+              color: palette.text,
+              border: `1px solid ${palette.hairline}`,
               outline: "none",
-              fontFamily: `"Courier New", monospace`,
+              fontFamily: palette.font,
               fontSize: 14,
             }}
           />
 
+          {/* Theme buttons */}
           <div style={{ margin: "8px 0 14px 0" }}>
-            <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 6 }}>
+            <div
+              style={{ fontSize: 13, color: palette.subtext, marginBottom: 6 }}
+            >
               Theme
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -132,13 +153,14 @@ export default function StartOverlay() {
                 onClick={() => setTheme("dark")}
                 style={{
                   padding: "8px 12px",
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: `1px solid ${
-                    theme === "dark" ? accent : "rgba(148,163,184,0.35)"
+                    theme === "dark" ? palette.accent : palette.hairline
                   }`,
                   background:
-                    theme === "dark" ? "rgba(16,185,129,0.10)" : "transparent",
-                  color: "inherit",
+                    theme === "dark" ? palette.accentSubtle : "transparent",
+                  color: palette.text,
+                  fontFamily: palette.font,
                   cursor: "pointer",
                 }}
               >
@@ -148,13 +170,14 @@ export default function StartOverlay() {
                 onClick={() => setTheme("light")}
                 style={{
                   padding: "8px 12px",
-                  borderRadius: 6,
+                  borderRadius: 8,
                   border: `1px solid ${
-                    theme === "light" ? accent : "rgba(148,163,184,0.35)"
+                    theme === "light" ? palette.accent : palette.hairline
                   }`,
                   background:
-                    theme === "light" ? "rgba(14,165,233,0.10)" : "transparent",
-                  color: "inherit",
+                    theme === "light" ? palette.accentSubtle : "transparent",
+                  color: palette.text,
+                  fontFamily: palette.font,
                   cursor: "pointer",
                 }}
               >
@@ -163,8 +186,11 @@ export default function StartOverlay() {
             </div>
           </div>
 
+          {/* Music selector */}
           <div style={{ margin: "8px 0 18px 0" }}>
-            <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 6 }}>
+            <div
+              style={{ fontSize: 13, color: palette.subtext, marginBottom: 6 }}
+            >
               Music
             </div>
             <div style={{ display: "grid", gap: 8 }}>
@@ -192,22 +218,23 @@ export default function StartOverlay() {
             </div>
           </div>
 
+          {/* Start button */}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button
               ref={startBtnRef}
               onClick={startExperience}
               style={{
-                padding: "12px 18px",
-                borderRadius: 6,
-                border: `1px solid ${accent}`,
-                cursor: "pointer",
-                fontWeight: 700,
-                fontFamily: `"Courier New", monospace`,
-                color: accent,
+                padding: "10px 16px",
+                borderRadius: 8,
+                border: `1px solid ${palette.accent}`,
                 background: "transparent",
+                color: palette.accent,
+                fontWeight: 600,
+                fontFamily: palette.font,
+                cursor: "pointer",
               }}
             >
-              START EXPERIENCE
+              Start Experience
             </button>
           </div>
 
