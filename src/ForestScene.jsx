@@ -10,6 +10,7 @@ import { Environment, ContactShadows, Html } from "@react-three/drei";
 import { Perf } from "r3f-perf";
 import { userSettings } from "./stores/userSettings";
 import EndOverlay from "./EndOverlay"; // ✅ render it here too
+import MusicManager from "./MusicManager";
 
 export default function ForestScene() {
   const [firefliesCleared, setFirefliesCleared] = useState(false);
@@ -50,6 +51,7 @@ export default function ForestScene() {
       {/* World only renders when NOT in 'end' */}
       {stage !== "end" && (
         <>
+          <MusicManager />
           <Perf position="top-left" />
           <Environment preset="night" background blur={0.25} intensity={0.8} />
           <directionalLight
