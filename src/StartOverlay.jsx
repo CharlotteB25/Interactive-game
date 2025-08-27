@@ -67,7 +67,7 @@ export default function StartOverlay() {
             position: "absolute",
             top: "50%",
             left: "50%",
-            transform: "translate(-110%, -100%)",
+            transform: "translate(-50%, -50%)",
             width: "min(720px, 92vw)",
             borderRadius: 12,
             padding: "24px 28px",

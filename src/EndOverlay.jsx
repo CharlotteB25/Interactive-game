@@ -73,7 +73,7 @@ export default function EndOverlay() {
             position: "absolute",
             top: "50%",
             left: "50%",
-            transform: "translate(-100%, -110%)", // keep your custom positioning
+            transform: "translate(-50%, -50%)", // keep your custom positioning
             width: "min(720px, 92vw)",
             borderRadius: 12,
             padding: "24px 28px",
