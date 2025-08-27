@@ -1,5 +1,3 @@
-# Template XR
-
 This project is an interactive 3D experience built with **React Three Fiber**, **Three.js**, and **Rapier physics**.  
 It showcases a custom 3D environment with models, lighting, interactions, and music.
 
@@ -54,7 +52,7 @@ If you want to run this project locally after downloading/cloning it from GitHub
 
 ---
 
-- **Music by**:
+- **Preview**:
   Game is also available on Vercel: https://interactive-game-beta.vercel.app/
 
 🚀 You can now explore, customize, and expand this template for your own XR projects!
