@@ -45,23 +45,9 @@ function HUDSwitch() {
     return (
       <div
         style={{
-          position: "fixed",
-          top: 12,
-          left: "50%",
-          transform: "translateX(-50%)",
-          background: "rgba(255,255,255,0.85)",
-          padding: "8px 12px",
-          borderRadius: 12,
-          color: "#111",
-          fontSize: 14,
-          boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-          zIndex: 999,
           pointerEvents: "none",
         }}
-      >
-        <strong>Forest of Facts</strong> — move closer to floating objects to
-        learn more.
-      </div>
+      ></div>
     );
   }
   return <SimonHUD />;

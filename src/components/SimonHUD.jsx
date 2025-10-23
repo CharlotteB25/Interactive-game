@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSimonStore } from "../stores/simonStore";
-import { userSettings } from "../stores/userSettings"; // ✅ import settings to get name
+import { userSettings } from "../stores/userSettings";
 
-// ✅ Vite-served audio
 import correctUrl from "../assets/sounds/rightAnswer.wav";
 import wrongUrl from "../assets/sounds/wrongAnswer.mp3";
 
@@ -44,6 +43,11 @@ function usePalette(theme = "system") {
 }
 
 export default function SimonHUD({ theme = "system" }) {
+  // Always call hooks in the same order
+  const { stage: appStage, name } = userSettings();
+  const palette = usePalette(theme);
+
+  // Simon store hooks
   const stage = useSimonStore((s) => s.stage);
   const round = useSimonStore((s) => s.round);
   const revealing = useSimonStore((s) => s.revealing);
@@ -54,14 +58,26 @@ export default function SimonHUD({ theme = "system" }) {
   const replay = useSimonStore((s) => s.replay);
   const press = useSimonStore((s) => s.press);
 
-  const { name } = userSettings(); // ✅ grab name from settings
+  // ⭐ optional: gently reset Simon to "intro" each time experience starts
+  useEffect(() => {
+    // if your store has reset(), prefer that; otherwise safe partial set:
+    try {
+      useSimonStore.getState().reset?.();
+    } catch {}
+    try {
+      useSimonStore.setState?.((prev) => ({
+        ...prev,
+        stage: "intro",
+        // keep other fields if your store needs them
+      }));
+    } catch {}
+    // run only when experience becomes active
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const lastStageRef = useRef(stage);
   const sfxUnlockedRef = useRef(false);
 
-  const palette = usePalette(theme);
-
-  // --- audio + feedback hooks stay unchanged ---
   const sfx = useMemo(
     () => ({
       correct: new Audio(correctUrl),
@@ -135,7 +151,7 @@ export default function SimonHUD({ theme = "system" }) {
     start();
   };
 
-  // --- shared styles ---
+  // --- styles ---
   const panelBase = {
     background: palette.panel,
     color: palette.text,
@@ -145,19 +161,8 @@ export default function SimonHUD({ theme = "system" }) {
     boxShadow: palette.shadow,
     border: `1px solid ${palette.hairline}`,
   };
-
-  const titleStyle = {
-    fontWeight: 600,
-    fontSize: 14,
-    letterSpacing: 0.3,
-  };
-
-  const subStyle = {
-    fontSize: 13,
-    color: palette.subtext,
-    lineHeight: 1.45,
-  };
-
+  const titleStyle = { fontWeight: 600, fontSize: 14, letterSpacing: 0.3 };
+  const subStyle = { fontSize: 13, color: palette.subtext, lineHeight: 1.45 };
   const buttonBase = {
     padding: "8px 12px",
     borderRadius: 8,
@@ -168,13 +173,11 @@ export default function SimonHUD({ theme = "system" }) {
     fontFamily: palette.font,
     cursor: "pointer",
   };
-
   const buttonAccent = {
     ...buttonBase,
     border: `1px solid ${palette.accent}`,
     color: palette.accent,
   };
-
   const chip = {
     padding: "2px 8px",
     borderRadius: 999,
@@ -207,14 +210,12 @@ export default function SimonHUD({ theme = "system" }) {
             }}
           >
             <div style={{ ...titleStyle, marginBottom: 8 }}>
-              Simon Says{name ? `, ${name}` : ""}
+              {"Simon Says" + (name ? `, ${name}` : "")}
             </div>
-
             <div style={{ ...subStyle, marginBottom: 16 }}>
               Watch the lights, then move near one and press{" "}
               <span style={{ fontWeight: 600 }}>Space</span> to repeat.
             </div>
-
             <button
               onClick={handleStart}
               style={buttonAccent}
@@ -251,7 +252,9 @@ export default function SimonHUD({ theme = "system" }) {
                 marginBottom: 6,
               }}
             >
-              <div style={titleStyle}>Simon Says{name ? `, ${name}` : ""}</div>
+              <div style={titleStyle}>
+                {"Simon Says" + (name ? `, ${name}` : "")}
+              </div>
               <div style={chip}>
                 {stage === "fail" ? "Try again" : `Round ${round}`}
               </div>
